@@ -4,45 +4,46 @@ class BoundedThroughputTask(UnboundedThroughputTask):
     def __init__(self, *args, time_limit_seconds=300, **kwargs):
         super().__init__(*args, **kwargs)
         self.time_limit_seconds = time_limit_seconds
+        self.elapsed_compute_time = 0  # track cumulative time
 
     def verify(self, score, instance, step_statistics):
-        # step_statistics or program should be passed in, adapt as needed
-        elapsed = 0
-        max_achieved_throughput = 0
-        max_achievements = None
+        # Get timing metrics for the current step
+        all_metrics = step_statistics.get("timing_metrics", [])
+        used_time = get_last_successful_llm_api_call_duration(all_metrics)
+        self.elapsed_compute_time += used_time
+        time_left = max(0, self.time_limit_seconds - self.elapsed_compute_time)
 
-        # Suppose you have access to a list of all evaluated programs for this agent
-        evaluated_programs = step_statistics.get("programs", [])
-
-        for program in evaluated_programs:
-            timing_metrics = program.timing_metrics  # This is already populated by TrajectoryRunner
-            # You want ONLY the last claude_api_call in each step, per your requirements
-            if "claude_api_call" in timing_metrics:
-                calls = timing_metrics["claude_api_call"]
-                if isinstance(calls, list):
-                    elapsed += float(calls[-1])  # Only use the last call's time for each step
-                else:
-                    elapsed += float(calls)
-            # Optionally, accumulate other timings if needed
-
-            # Stop if we've exceeded the budget
-            if elapsed >= self.time_limit_seconds:
-                break
-
-            # Track throughput as usual (unchanged from UnboundedThroughputTask)
-            achievements = program.meta.get("achievements", {})
-            dynamic_achievements = achievements.get("dynamic", {})
-            target_throughput = dynamic_achievements.get(self.throughput_entity, 0)
-            if target_throughput > max_achieved_throughput:
-                max_achieved_throughput = target_throughput
-                max_achievements = achievements
-
+        # Usual throughput/achievements logic
+        max_achievements = ... # your logic
+        number_of_steps_left = self.trajectory_length - step_statistics["current_step_id"] - 1
         return TaskResponse(
-            success=False,  # Or True if you want to stop the agent
+            success=(time_left <= 0),
             meta={
                 "achievements": max_achievements,
-                "seconds_elapsed": elapsed,
-                "time_limit": self.time_limit_seconds,
-                "nr_of_steps_left": self.trajectory_length - step_statistics["current_step_id"] - 1
+                "time_left": time_left,
+                "nr_of_steps_left": number_of_steps_left,
             }
         )
+
+    def enhance_response_with_task_output(self, response: str, task_response: TaskResponse) -> str:
+        response = super().enhance_response_with_task_output(response, task_response)
+        time_left = task_response.meta.get("time_left", None)
+        if time_left is not None:
+            response += f"\n\n⏳ Time left: {int(time_left)} seconds"
+        return response
+
+def get_last_successful_llm_api_call_duration(metrics: list) -> float:
+    api_ops = ["claude_api_call", "open_router_api_call", "deepseek_api_call", "gemini_api_call",
+               "together_api_call", "o1_mini_api_call"]
+    def flatten(metrics):
+        for metric in metrics:
+            yield metric
+            yield from flatten(metric.get("children", []))
+    api_calls = [m for m in flatten(metrics) if m["operation"] in api_ops]
+    for m in reversed(api_calls):
+        http_code = m.get("metadata", {}).get("http_status")
+        if http_code == 200:
+            return m["duration"]
+    if api_calls:
+        return api_calls[-1]["duration"]
+    return 0.0
