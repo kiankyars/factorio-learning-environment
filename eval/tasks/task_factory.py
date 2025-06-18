@@ -5,6 +5,7 @@ from eval.tasks.throughput_task import ThroughputTask
 from eval.tasks.default_task import DefaultTask
 from eval.tasks.task_abc import TaskABC
 from eval.tasks.unbounded_throughput_task import UnboundedThroughputTask
+from eval.tasks.bounded_throughput_task import BoundedThroughputTask
 from pathlib import Path
 import os
 
@@ -24,7 +25,8 @@ class TaskFactory:
         task_type_mapping = {
             "throughput": ThroughputTask,
             "default": DefaultTask,
-            "unbounded_throughput": UnboundedThroughputTask
+            "unbounded_throughput": UnboundedThroughputTask,
+            "bounded_throughput": BoundedThroughputTask
         }
         task_type = input_json["task_type"]
         task_config = input_json["config"]

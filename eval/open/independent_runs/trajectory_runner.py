@@ -56,7 +56,7 @@ class TrajectoryRunner:
     def __init__(self,
                  #llm_factory: LLMFactory,
                  agents: list[AgentABC],
-                 db_client: PostgresDBClient,
+                 db_client: SQLliteDBClient,
                  evaluator: SimpleFactorioEvaluator,
                  config: EvalConfig,
                  process_id: int):
@@ -366,17 +366,13 @@ async def create_factorio_instance(instance_id: int, num_agents: int = 1, agent_
     return instance
 
 
-async def create_db_client() -> PostgresDBClient:
+async def create_db_client() -> SQLliteDBClient:
     """Create database client with connection pool"""
-    return PostgresDBClient(
+    return SQLliteDBClient(
         max_conversation_length=40,
         min_connections=2,
         max_connections=5,
-        host=os.getenv("SKILLS_DB_HOST"),
-        port=os.getenv("SKILLS_DB_PORT"),
-        dbname=os.getenv("SKILLS_DB_NAME"),
-        user=os.getenv("SKILLS_DB_USER"),
-        password=os.getenv("SKILLS_DB_PASSWORD")
+        database=os.getenv("SQLITE_DB_FILE", "skills.db")
     )
 
 

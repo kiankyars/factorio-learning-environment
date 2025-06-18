@@ -479,7 +479,7 @@ class PostgresDBClient(DBClient):
 class SQLliteDBClient(DBClient):
     def __init__(self, max_conversation_length: int = 20, min_connections: int = 5, max_connections: int = 20, **db_config):
         super().__init__(max_conversation_length, min_connections, max_connections, **db_config)
-        self.database_file = self.db_config.get('database_file')
+        self.database_file = self.db_config.get('database')
 
     async def initialize(self):
         """Initialize the connection pool"""

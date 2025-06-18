@@ -1,14 +1,16 @@
 {
-    "task_class": "BoundedThroughputTask",
-    "task_key": "iron_plate_time_bounded_300s",
-    "trajectory_length": 50,
-    "goal_description": "Create an AUTOMATIC factory that produces iron plates as efficiently as possible. Your goal is to maximize iron plate production within the time limit.",
-    "throughput_entity": "iron-plate", 
-    "time_limit_seconds": 300,
-    "holdout_wait_period": 60,
-    "pre_holdout_wait_period": 0,
-    "show_number_of_steps_left_in_prompt": true,
-    "include_stats": true,
-    "use_populated_inventory": true,
-    "unlock_all_research": true
+    "task_type": "unbounded_throughput",
+    "config": {
+        "task_key": "iron_plate_time_bounded_300s",
+        "trajectory_length": 50,
+        "goal_description": "Create an AUTOMATIC factory that produces iron plates as efficiently as possible. Your goal is to maximize iron plate production within the time limit.",
+        "throughput_entity": "iron-plate", 
+        "time_limit_seconds": 300,
+        "holdout_wait_period": 60,
+        "pre_holdout_wait_period": 0,
+        "show_number_of_steps_left_in_prompt": true,
+        "include_stats": true,
+        "use_populated_inventory": true,
+        "unlock_all_research": true
+    }
 } 
