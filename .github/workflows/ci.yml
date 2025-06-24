@@ -1,0 +1,101 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: uv sync --extra dev
+      - name: Run unit tests
+        run: uv run pytest env/tests/ -v --tb=short
+
+  action-tests:
+    name: Action Tests
+    runs-on: ubuntu-latest
+    services:
+      factorio:
+        image: factoriotools/factorio:1.1.110
+        ports:
+          - 27015:27015/tcp
+          - 34197:34197/udp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: uv sync --extra env --extra eval
+      - name: Run action tests
+        run: uv run pytest env/tests/actions/ -v --tb=short
+        env:
+          FLE_DB_TYPE: sqlite
+          SQLITE_DB_FILE: .fle/test.db
+
+  trajectory-tests:
+    name: Trajectory Runner Tests
+    runs-on: ubuntu-latest
+    services:
+      factorio:
+        image: factoriotools/factorio:1.1.110
+        ports:
+          - 27015:27015/tcp
+          - 34197:34197/udp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: uv sync --extra env --extra eval
+      - name: Run trajectory runner tests
+        run: |
+          uv run pytest env/tests/multiagent/ -v --tb=short
+          uv run pytest env/tests/eval/ -v --tb=short
+        env:
+          FLE_DB_TYPE: sqlite
+          SQLITE_DB_FILE: .fle/test.db
+
+  db-tests:
+    name: Database Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: test123
+          POSTGRES_USER: test_user
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: uv sync --extra eval
+      - name: Run database tests
+        run: uv run pytest env/tests/eval/samplers/ -v --tb=short
+        env:
+          FLE_DB_TYPE: postgres
+          SKILLS_DB_HOST: localhost
+          SKILLS_DB_PORT: 5432
+          SKILLS_DB_NAME: test_db
+          SKILLS_DB_USER: test_user
+          SKILLS_DB_PASSWORD: test123 
